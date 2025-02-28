@@ -1,0 +1,58 @@
+#include "dune_radiological_model_decay0.fcl"
+#include "textfilegen.fcl"
+#include "larg4particlefilter.fcl"
+#include "prodsingle_iceberg.fcl"
+
+services.TFileService.fileName: "text_hist.root" //reading in the input file
+
+standard_larg4particlefilter:
+{
+  module_type:                        "LArG4ParticleFilter"
+  module_label:                       "myfilter"
+  LArG4ModuleLabel:                   "largeant"
+  InterestingPDGs:                    [ 13., -13. ]           // Selecting only muons and anti-muons
+  IsPrimary:                          [ -1, -1  ]             // -1 = don't care
+  ParticleMinMomentum:                [ -1., -1. ]            // -1 = don't care
+  ParticleMaxMomentum:                [ 0.4, 0.4 ]
+  StartInTPC:                         [ 0, 0 ]                // 0 = don't care
+  StopInTPC:                          [ 1., 1. ]              // 1 = yes stopped
+  ParticleMinTPCLength:               [ -1., -1. ]            // -1 = don't care
+  RequireAllInterestingParticles:     false
+}
+
+
+physics.filters: {
+  f1: @local::standard_larg4particlefilter
+}
+
+physics.producers.largeant.VisualizeEvents: true
+
+physics.producers.Ar39GenInLAr: @local::dune10kt_39Ar_in_LAr
+
+physics.producers.generator:
+    {
+      module_type: "TextFileGen"
+      InputFileName: "/exp/dune/app/users/odalager/simulationFunTimes/mycosmics_events.txt"
+      Offset: 0
+    }
+physics.simulate: [
+  "generator",
+  "Ar39GenInLAr",
+  "largeant",
+  "f1",                // this filters out events which ends up as "failed" events at the end
+  "daq",
+  "rns"
+  ]
+
+physics.trigger_paths: [
+  "simulate"
+  ]
+
+outputs: {
+   out1: {
+      fileName: "debugging_JoshsOutput.root"
+      module_type: "RootOutput"
+      SelectEvents: ["simulate"]
+   }
+}
+
